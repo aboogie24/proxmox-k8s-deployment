@@ -39,8 +39,11 @@ load_env() {
 }
 
 run_on_remote() { 
-  command=${1}
-  sshpass -p "${PROXMOX_PASS}" ssh -o StrictHostKeyChecking=no  "${PROXMOX_USERNAME}"@"${PROXMOX_IP}" "${command}" 
+  local command=${1}
+
+  ssh_command="export VM_ID=${VM_ID}; export VM_NAME=${VM_NAME}; export VM_MEMORY=${VM_MEMORY}; export VM_CORES=${VM_CORES}; ${command}" 
+  echo "$ssh_command"
+  sshpass -p "${PROXMOX_PASS}" ssh -o StrictHostKeyChecking=no  "${PROXMOX_USERNAME}"@"${PROXMOX_IP}" "${ssh_command}" 
 }
 
 
@@ -129,7 +132,8 @@ nfs_setup() {
 }
 
 create_vm() { 
-  run_on_remote 'qm list'
+
+  run_on_remote "qm create $VM_ID --name $VM_NAME --memory $VM_MEMORY --cores $VM_CORES --net0 virtio,bridge=vmbr0"
 }
 
 main() {
