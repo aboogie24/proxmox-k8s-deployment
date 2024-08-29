@@ -15,6 +15,16 @@ export PURPLE='\033[0;35m'       # Purple
 export CYAN='\033[0;36m'         # Cyan
 export WHITE='\033[0;37m'        # White
 
+# Function to load .env file
+load_env() {
+    if [ -f .env ]; then
+        export "$(grep -v '^#' .env | xargs)"
+    else
+        echo ".env file not found"
+        exit 1
+    fi
+}
+
 ## Cheak it see if the command exist
 command_exist() { 
   if command -v "${1}" &>/dev/null; then 
@@ -100,11 +110,12 @@ nfs_setup() {
 
 main() {
   
-  install_key_components
-  change_hostname controller
+  load_env
+  # install_key_components
+  # change_hostname controller
   #Create nodes 
   #     Maybe use proxmox api
-  nfs_setup
+  # nfs_setup
 }
 
 ## Run main functinon 
