@@ -18,12 +18,32 @@ export WHITE='\033[0;37m'        # White
 # Function to load .env file
 load_env() {
     if [ -f .env ]; then
-        export "$(grep -v '^#' .env | xargs)"
+    # Read each line in .env file
+    while IFS='=' read -r key value
+    do
+        # Ignore comments and empty lines
+        if [[ $key != \#* ]] && [ -n "$key" ]; then
+            # Remove any leading/trailing whitespace
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            
+            # Export the variable
+            export "$key"="${value}"
+            echo  -e "${YELLOW}Exported ${BLUE}$key${NC}"
+        fi
+    done < .env
+    echo "Environment variables loaded."
     else
-        echo ".env file not found"
-        exit 1
+    echo ".env file not found."
     fi
 }
+
+run_on_remote() { 
+  command=${1}
+  sshpass -p "${PROXMOX_PASS}" ssh -o StrictHostKeyChecking=no  "${PROXMOX_USERNAME}"@"${PROXMOX_IP}" "${command}" 
+}
+
+
 
 ## Cheak it see if the command exist
 command_exist() { 
@@ -108,9 +128,16 @@ nfs_setup() {
   kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 }
 
+create_vm() { 
+  run_on_remote 'qm list'
+}
+
 main() {
   
+  # Load environment variables
   load_env
+
+  create_vm
   # install_key_components
   # change_hostname controller
   #Create nodes 
