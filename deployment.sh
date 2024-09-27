@@ -40,12 +40,8 @@ load_env() {
 
 run_on_remote() { 
   local command=${1}
-
-  ssh_command="export VM_ID=${VM_ID}; export VM_NAME=${VM_NAME}; export VM_MEMORY=${VM_MEMORY}; export VM_CORES=${VM_CORES}; ${command}" 
-  echo "$ssh_command"
-  sshpass -p "${PROXMOX_PASS}" ssh -o StrictHostKeyChecking=no  "${PROXMOX_USERNAME}"@"${PROXMOX_IP}" "${ssh_command}" 
+  sshpass -p "${PROXMOX_PASS}" ssh -o StrictHostKeyChecking=no  "${PROXMOX_USERNAME}"@"${PROXMOX_IP}" "${command}" 
 }
-
 
 
 ## Cheak it see if the command exist
@@ -132,8 +128,40 @@ nfs_setup() {
 }
 
 create_vm() { 
+  # Create VM on Proxmox
+  ssh_command="export VM_ID=${VM_ID}; export VM_NAME=${VM_NAME}; export VM_MEMORY=${VM_MEMORY}; export VM_CORES=${VM_CORES}; qm create ${VM_ID} --name ${VM_NAME} --memory ${VM_MEMORY} --cores ${VM_CORES} --net0 virtio,bridge=vmbr0"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
+  
+  # Set boot cd
+  ssh_command="qm set ${VM_ID} --boot c --bootdisk scsi0 --ide2 ${ISO_FILE},media=cdrom"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
 
-  run_on_remote "qm create $VM_ID --name $VM_NAME --memory $VM_MEMORY --cores $VM_CORES --net0 virtio,bridge=vmbr0"
+  # Create disk
+  ssh_command="qm set ${VM_ID} --scsi0 local-lvm:32"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
+
+  # Add a SCSI hard disk
+  ssh_command="qm set ${VM_ID} --scsi0 local-lvm:vm-${VM_ID}-disk-0,iothread=1,size=32G"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
+
+  # Set display to VNC
+  ssh_command="qm set ${VM_ID} --vga qxl"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
+
+  # Enable QEMU guest agent
+  ssh_command="qm set ${VM_ID} --agent enabled=1"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
+
+  # Start the vm
+  ssh_command="qm start ${VM_ID}"
+  echo "$ssh_command"
+  run_on_remote "$ssh_command"
 }
 
 main() {
